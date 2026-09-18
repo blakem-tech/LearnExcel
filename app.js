@@ -196,7 +196,7 @@ function renderMission(){
  app.innerHTML=shell("Spreadsheet Mission","Class Party Planner: combine the skills you've learned to solve a realistic problem.",`
  <div class="card"><div class="task">Your mission: calculate each item's total, then use SUM, AVERAGE, MIN and MAX to analyze the party costs.</div>
  <div class="mission-instructions"><strong>How to complete this mission:</strong> In the <b>Total</b> cells, type the formula shown under the table. When your formula is correct, the cell will change to the calculated result. For the four analysis boxes, type the formula and use its <b>Check</b> button to see your result.</div>
- <div class="grid-wrap"><table class="sheet mission-table"><thead><tr><th></th><th>Item</th><th>Price</th><th>Quantity</th><th>Total</th></tr></thead><tbody>
+ <div class="grid-wrap"><table class="sheet mission-table"><thead><tr><th></th><th>A</th><th>B</th><th>C</th><th>D</th></tr><tr><th></th><th>Item</th><th>Price</th><th>Quantity</th><th>Total</th></tr></thead><tbody>
  ${[2,3,4,5].map(r=>`<tr><th>${r}</th><td>${vals["A"+r]}</td><td>${vals["B"+r]}</td><td contenteditable="true" data-ref="C${r}">${vals["C"+r]}</td><td contenteditable="true" data-ref="D${r}" data-expected="=B${r}*C${r}"></td></tr>`).join("")}</tbody></table></div>
  <div class="formula-check-grid">
  

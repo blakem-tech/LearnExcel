@@ -150,7 +150,7 @@ function renderMinMax(){
 function renderArithmetic(){
  app.innerHTML=shell("Other Basic Calculations","Spreadsheets can also use ordinary arithmetic with cell references.",`
  <div class="card"><div class="chips"><span class="chip">+ addition</span><span class="chip">− subtraction</span><span class="chip">* multiplication</span><span class="chip">/ division</span></div>
- ${makeGrid(3,false,{A1:"Item",B1:"Price",C1:"Quantity",A2:"Pencil",B2:10,C2:3})}
+ ${makeGrid(3,false,{A1:"(A) Item",B1:"(B) Price",C1:"(C) Quantity",A2:"Pencil",B2:10,C2:3})}
  <div class="task">Write a formula to calculate the total cost of the pencils.</div>
  <div class="formula-box"><input id="formula" placeholder="=B2*C2"><button class="btn" id="check">Check Formula</button></div><div id="fb"></div></div>`);
  document.getElementById("check").onclick=()=>{
@@ -168,7 +168,7 @@ function renderChallenge(){
   {title:"Calculate the bananas",instruction:"How much did the bananas cost altogether? Write a formula using the banana price and quantity.",answer:"=B3*C3",equivalents:["=C3*B3"],hint:"For bananas, multiply Quantity × Price. The quantity is in B3 and the price is in C3."},
   {title:"Change the apple price",instruction:"Change the price of the apples from 30 to 35. Then type CHANGE below.",answer:"CHANGE",hint:"Find the Apple price in column C. Change 30 to 35, then type CHANGE."}
  ];
- const vals={A1:"Item",B1:"Quantity",C1:"Price",D1:"Total",A2:"Apples",B2:4,C2:30,A3:"Bananas",B3:6,C3:12,A4:"Oranges",B4:3,C4:25,A5:"Milk",B5:2,C5:45,A6:"Bread",B6:3,C6:20};
+ const vals={A1:"(A) Item",B1:"(B) Quantity",C1:"(C) Price",D1:"(D) Total",A2:"Apples",B2:4,C2:30,A3:"Bananas",B3:6,C3:12,A4:"Oranges",B4:3,C4:25,A5:"Milk",B5:2,C5:45,A6:"Bread",B6:3,C6:20};
  app.innerHTML=shell("Formula Challenge","Use the receipt below for every challenge. All the information you need is in the table.",`
  <div class="card">
    <div class="receipt-head"><div><div class="small">SHOPPING RECEIPT</div><h3 style="margin:4px 0 0">Mission Market</h3></div><div class="small">Challenge <span id="mi">1</span> of ${missions.length}</div></div>

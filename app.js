@@ -161,28 +161,32 @@ function renderArithmetic(){
 }
 function renderChallenge(){
  const missions=[
- ["Find the total","Use SUM.","=SUM(B2:B5)"],
- ["Find the average","Use AVERAGE.","=AVERAGE(B2:B5)"],
- ["Find the lowest value","Use MIN.","=MIN(B2:B5)"],
- ["Find the highest value","Use MAX.","=MAX(B2:B5)"],
- ["Calculate a value using multiplication","Multiply price by quantity.","=B2*C2"],
- ["Change one piece of data","Change B3 to 100, then check.","CHANGE"]
+  {title:"Find the total",instruction:"Calculate the total amount spent on all of the items. Use SUM.",answer:"=SUM(D2:D6)",hint:"The item totals are in column D. SUM adds a group of numbers."},
+  {title:"Find the average",instruction:"Calculate the average cost of one item. Use AVERAGE.",answer:"=AVERAGE(D2:D6)",hint:"Use the range containing the five item totals: D2:D6."},
+  {title:"Find the cheapest item",instruction:"Find the lowest item total. Use MIN.",answer:"=MIN(D2:D6)",hint:"MIN finds the smallest number. Look at the totals in column D."},
+  {title:"Find the most expensive item",instruction:"Find the highest item total. Use MAX.",answer:"=MAX(D2:D6)",hint:"MAX finds the largest number. Look at the totals in column D."},
+  {title:"Calculate the bananas",instruction:"How much did the bananas cost altogether? Write a formula using the banana price and quantity.",answer:"=B3*C3",equivalents:["=C3*B3"],hint:"For bananas, multiply Quantity × Price. The quantity is in B3 and the price is in C3."},
+  {title:"Change the apple price",instruction:"Change the price of the apples from 30 to 35. Then type CHANGE below.",answer:"CHANGE",hint:"Find the Apple price in column C. Change 30 to 35, then type CHANGE."}
  ];
- app.innerHTML=shell("Formula Challenge","Complete each mission. Incorrect attempts give hints rather than taking points away.",`
- <div class="card"><div class="small">Mission <span id="mi">1</span> of ${missions.length}</div><h3 id="mt"></h3><p id="ms"></p>
- <div id="challengeGrid"></div><div class="formula-box"><input id="answer" placeholder="Type your formula"><button class="btn" id="check">Check</button></div>
- <div id="hint"></div></div>`);
- let i=0; const vals={A1:"Item",B1:"Value",A2:"A",B2:10,A3:"B",B3:20,A4:"C",B4:30,A5:"D",B5:40};
- function load(){const m=missions[i];document.getElementById("mi").textContent=i+1;document.getElementById("mt").textContent=m[0];document.getElementById("ms").textContent=m[1];document.getElementById("answer").value="";document.getElementById("hint").innerHTML="";document.getElementById("challengeGrid").innerHTML=makeGrid(5,true,vals);if(i===5)document.getElementById("answer").placeholder="Type CHANGE after editing B3";}
+ const vals={A1:"Item",B1:"Quantity",C1:"Price",D1:"Total",A2:"Apples",B2:4,C2:30,A3:"Bananas",B3:6,C3:12,A4:"Oranges",B4:3,C4:25,A5:"Milk",B5:2,C5:45,A6:"Bread",B6:3,C6:20};
+ app.innerHTML=shell("Formula Challenge","Use the receipt below for every challenge. All the information you need is in the table.",`
+ <div class="card">
+   <div class="receipt-head"><div><div class="small">SHOPPING RECEIPT</div><h3 style="margin:4px 0 0">Mission Market</h3></div><div class="small">Challenge <span id="mi">1</span> of ${missions.length}</div></div>
+   <div class="task" id="task"></div>
+   <div class="grid-wrap"><table class="sheet mission-table challenge-sheet"><thead><tr><th></th><th>Item</th><th>Quantity</th><th>Price</th><th>Total</th></tr></thead><tbody>
+   ${[2,3,4,5,6].map(r=>`<tr><th>${r}</th><td>${vals["A"+r]}</td><td>${vals["B"+r]}</td><td contenteditable="true" data-ref="C${r}">${vals["C"+r]}</td><td data-ref="D${r}" class="calculated-total">—</td></tr>`).join("")}
+   </tbody></table></div>
+   <p class="small">The Total column shows what each purchase costs altogether. Try changing a price in the receipt and see how the information changes.</p>
+   <div class="formula-box"><input id="answer" placeholder="Type your formula here"><button class="btn" id="check">Check</button></div>
+   <button class="btn ghost" id="hint">Show Hint</button><div id="fb"></div>
+ </div>`);
+ let i=0;
+ function calculateTotals(){[2,3,4,5,6].forEach(r=>{const qty=Number(vals["B"+r]);const price=Number(document.querySelector(`[data-ref="C${r}"]`).innerText.trim());const total=document.querySelector(`[data-ref="D${r}"]`);total.textContent=Number.isFinite(qty)&&Number.isFinite(price)?qty*price:"—";});}
+ function load(){const m=missions[i];document.getElementById("mi").textContent=i+1;document.getElementById("task").innerHTML=`<strong>${m.title}</strong><br>${m.instruction}`;document.getElementById("answer").value="";document.getElementById("answer").placeholder=i===5?"Type CHANGE after editing the price":"e.g. "+m.answer;document.getElementById("fb").innerHTML="";calculateTotals();}
  load();
- document.getElementById("check").onclick=()=>{
-  const v=normalize(document.getElementById("answer").value);let ok=false;
-  if(i<5) ok=v===normalize(missions[i][2]);
-  else ok=v==="CHANGE"&&document.querySelector('[data-ref=B3]').innerText.trim()==="100";
-  if(!ok){document.getElementById("hint").innerHTML=`<div class="feedback bad">❌ Not quite. 💡 ${i===0?"SUM adds a group of numbers.":i===1?"AVERAGE finds the mean.":i===2?"MIN finds the smallest value.":i===3?"MAX finds the largest value.":i===4?"Use * to multiply.":"Change B3 to 100, then type CHANGE."}</div>`;return}
-  document.getElementById("hint").innerHTML=`<div class="feedback good">✅ Mission complete!</div>`;
-  i++;if(i===missions.length){award("p8",10);setTimeout(next,700)}else setTimeout(load,500);
- };
+ document.querySelectorAll('.challenge-sheet td[contenteditable="true"]').forEach(td=>td.addEventListener("input",calculateTotals));
+ document.getElementById("hint").onclick=()=>{const m=missions[i];document.getElementById("fb").innerHTML=`<div class="feedback">💡 Hint: ${m.hint}</div>`;};
+ document.getElementById("check").onclick=()=>{const m=missions[i],v=normalize(document.getElementById("answer").value);let ok=false;if(i<5)ok=v===normalize(m.answer)||(m.equivalents||[]).some(x=>v===normalize(x));else{const applePrice=document.querySelector('[data-ref="C2"]').innerText.trim();ok=v==="CHANGE"&&applePrice==="35";}if(!ok){document.getElementById("fb").innerHTML='<div class="feedback bad">❌ Not quite. Try the hint and check the receipt carefully.</div>';return;}document.getElementById("fb").innerHTML='<div class="feedback good">✅ Mission complete!</div>';i++;if(i===missions.length){award("p8",10);setTimeout(next,700);}else setTimeout(load,500);};
 }
 function renderMission(){
  const vals={A1:"Item",B1:"Price",C1:"Quantity",D1:"Total",A2:"Juice",B2:25,C2:4,A3:"Snacks",B3:40,C3:3,A4:"Fruit",B4:30,C4:5,A5:"Cups",B5:20,C5:2};

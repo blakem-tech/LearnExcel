@@ -47,3 +47,5 @@ input:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(
 @media print{
  body{background:#fff}.topbar,.progress-wrap,.no-print,.toast{display:none!important}main{max-width:none;padding:0}.certificate{box-shadow:none;border:8px double #27334d;max-width:none;margin:0;min-height:90vh}
 }
+
+.receipt-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px dashed #cbd3dd;padding-bottom:15px;margin-bottom:18px}.challenge-sheet th{white-space:nowrap}.challenge-sheet td.calculated-total{font-weight:800;background:#f7f9fb}@media(max-width:700px){.receipt-head{display:block}.receipt-head .small:last-child{margin-top:8px}}

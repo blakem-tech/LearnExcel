@@ -1,0 +1,244 @@
+const KEY="missionExcelV1";
+const phases=[
+ "Spreadsheet Explorer","Meet the Spreadsheet","Enter & Edit Data","SUM","AVERAGE",
+ "MIN & MAX","Basic Calculations","Formula Challenge","Spreadsheet Mission","Reflection","Certificate"
+];
+const state=Object.assign({
+ name:"",phase:0,score:0,earned:{},data:{},reflection:"",completed:false
+},JSON.parse(localStorage.getItem(KEY)||"{}"));
+
+const app=document.getElementById("app");
+const scoreEl=document.getElementById("score"), phaseLabel=document.getElementById("phaseLabel"), progress=document.getElementById("progress");
+function save(){localStorage.setItem(KEY,JSON.stringify(state));updateTop()}
+function updateTop(){
+ scoreEl.textContent=state.score; phaseLabel.textContent=state.phase?`${state.phase}. ${phases[state.phase-1]}`:"Welcome";
+ progress.style.width=state.phase?`${Math.min(100,(state.phase/10)*100)}%`:"0%";
+}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1800)}
+function award(key,pts){
+ if(!state.earned[key]){state.earned[key]=pts;state.score=Math.min(100,state.score+pts);save();toast(`⭐ +${pts} points!`)}
+}
+function go(n){state.phase=n;save();render()}
+function next(){go(state.phase+1)}
+function grade(s){return s>=90?["A","Spreadsheet Expert"]:s>=80?["B","Great Spreadsheet Skills"]:s>=70?["C","Good Progress"]:s>=60?["D","Keep Practicing"]:["Needs More Practice","You're Learning!"]}
+
+function shell(title,sub,body){
+ return `<section>
+   <div class="lesson-head"><div><div class="eyebrow">Phase ${state.phase} of 10</div><h2>${title}</h2><p class="lead" style="margin:0">${sub}</p></div></div>
+   ${body}
+ </section>`;
+}
+
+function render(){
+ updateTop();
+ if(state.phase===0) return renderWelcome();
+ if(state.phase===1) return renderBasics();
+ if(state.phase===2) return renderGrid();
+ if(state.phase===3) return renderEdit();
+ if(state.phase===4) return renderFormula("SUM");
+ if(state.phase===5) return renderFormula("AVERAGE");
+ if(state.phase===6) return renderMinMax();
+ if(state.phase===7) return renderArithmetic();
+ if(state.phase===8) return renderChallenge();
+ if(state.phase===9) return renderMission();
+ if(state.phase===10) return renderReflection();
+ if(state.phase>=11) return renderCertificate();
+}
+
+function renderWelcome(){
+ app.innerHTML=`<div class="hero"><div class="hero-inner">
+ <div class="eyebrow">Interactive spreadsheet course</div><h1>Spreadsheet Skills:<br>Mission Excel</h1>
+ <p class="lead">Learn how spreadsheets work, practice real formulas, complete missions, and earn your certificate.</p>
+ <div class="card narrow">
+ <label class="field"><span>What's your name?</span><input id="name" type="text" maxlength="40" placeholder="Enter your first name"></label>
+ <button class="btn" id="start">🚀 Start Lesson</button>
+ <p class="small">Your progress is saved only in this browser. No account is required.</p>
+ </div>
+ <button class="btn ghost no-print" id="teacher">Teacher View</button>
+ </div></div>`;
+ document.getElementById("name").value=state.name||"";
+ document.getElementById("start").onclick=()=>{const n=document.getElementById("name").value.trim();if(!n)return toast("Please enter your name first.");state.name=n;go(1)};
+ document.getElementById("teacher").onclick=teacherView;
+}
+function renderBasics(){
+ app.innerHTML=shell("What is a spreadsheet?","A spreadsheet helps us organize information and perform calculations.",`
+ <div class="card"><h3>Think of a spreadsheet as a smart table.</h3>
+ <p>You can use one to keep track of test scores, plan a class party, track money, record sports scores, make shopping lists, organize supplies, and compare information.</p>
+ <div class="chips"><span class="chip">Rows & columns</span><span class="chip">Data</span><span class="chip">Formulas</span><span class="chip">Calculations</span></div>
+ <div class="task">Which would be a good use for a spreadsheet?</div>
+ <div class="choice-grid" id="choices">
+ ${["Drawing a picture","Keeping track of everyone's test scores","Playing a video game","Writing a story"].map((x,i)=>`<button class="choice" data-i="${i}">${x}</button>`).join("")}
+ </div><div id="fb"></div></div>`);
+ document.querySelectorAll(".choice").forEach(b=>b.onclick=()=>{
+   const ok=b.dataset.i==="1";document.querySelectorAll(".choice").forEach(x=>x.classList.remove("wrong","correct"));
+   b.classList.add(ok?"correct":"wrong");document.getElementById("fb").innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"✅ Correct! Spreadsheets are great for organizing and calculating scores.":"❌ Not quite. Think about which choice involves organizing information."}</div>`;
+   if(ok) {award("p1",10);setTimeout(next,650)}
+ });
+}
+
+const cols=["A","B","C","D","E","F"];
+function cellRef(c,r){return cols[c]+r}
+function makeGrid(rows=8,editable=false,values={}){
+ let h="<div class='grid-wrap'><table class='sheet'><thead><tr><th class='rowhead'></th>"+cols.slice(0,5).map(c=>`<th>${c}</th>`).join("")+"</tr></thead><tbody>";
+ for(let r=1;r<=rows;r++){h+=`<tr><th>${r}</th>`;for(let c=0;c<5;c++){let ref=cellRef(c,r);h+=`<td data-ref="${ref}" ${editable?"contenteditable=true":""}>${esc(values[ref]??"")}</td>`}h+="</tr>"}return h+"</tbody></table></div>";
+}
+function renderGrid(){
+ app.innerHTML=shell("Meet the Spreadsheet","Cells are identified by a column letter and row number.",`
+ <div class="card"><p>For example, <span class="ref">A1</span> means <strong>column A, row 1</strong>. Click a cell to see its reference.</p>
+ ${makeGrid(8)}<p id="selected" class="task">Click a cell.</p><div id="rangeTask" class="task">Challenge: select the range <strong>B2:B6</strong>.</div><button class="btn" id="continue" disabled>Continue</button></div>`);
+ let clicked=false, rangeDone=false, first=null;
+ document.querySelectorAll(".sheet td").forEach(td=>td.onclick=()=>{
+   document.querySelectorAll(".sheet td").forEach(x=>x.classList.remove("selected","range"));td.classList.add("selected");
+   document.getElementById("selected").innerHTML=`You selected <strong>${td.dataset.ref}</strong>.`;
+   clicked=true;if(clicked&&rangeDone)document.getElementById("continue").disabled=false;
+ });
+ document.querySelectorAll(".sheet td").forEach(td=>td.addEventListener("mousedown",e=>{first=td.dataset.ref}));
+ document.querySelectorAll(".sheet td").forEach(td=>td.addEventListener("mouseup",e=>{
+   if(first==="B2"&&td.dataset.ref==="B6"){
+    for(let r=2;r<=6;r++)document.querySelector(`[data-ref=B${r}]`).classList.add("range");
+    rangeDone=true;document.getElementById("rangeTask").innerHTML="✅ Range B2:B6 selected!";
+    award("p2",10);if(clicked)document.getElementById("continue").disabled=false;
+   }
+ }));
+ document.getElementById("continue").onclick=next;
+}
+function renderEdit(){
+ const vals={A1:"Student",B1:"English",C1:"Math",D1:"Science",A2:"Alex",B2:82,C2:91,D2:76,A3:"Mia",B3:95,C3:88,D3:92,A4:"Ben",B4:74,C4:81,D4:79,A5:"Sam",B5:89,C5:94,D5:87};
+ app.innerHTML=shell("Enter & Edit Data","Type directly into spreadsheet cells. Real spreadsheets let you change information whenever you need to.",`
+ <div class="card">${makeGrid(5,true,vals)}<div class="task">Tasks: change <strong>C2</strong> to 95 and <strong>D4</strong> to 85.</div><button class="btn" id="check">Check Changes</button><div id="fb"></div></div>`);
+ document.getElementById("check").onclick=()=>{
+  const c2=document.querySelector('[data-ref=C2]').innerText.trim(),d4=document.querySelector('[data-ref=D4]').innerText.trim();
+  const ok=c2==="95"&&d4==="85";document.getElementById("fb").innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"✅ Excellent! You edited both values correctly.":"❌ Not quite. Check C2 and D4 carefully."}</div>`;
+  if(ok){award("p3",10);setTimeout(next,700)}
+ };
+}
+function normalize(s){return s.replace(/\s+/g,"").toUpperCase()}
+function formulaExpected(kind){
+ return kind==="SUM"?["=SUM(B2:B5)","=B2+B3+B4+B5"]:["=AVERAGE(B2:B5)"];
+}
+function renderFormula(kind){
+ const vals={A1:"Student",B1:"Score",A2:"Alex",B2:80,A3:"Mia",B3:90,A4:"Ben",B4:75,A5:"Sam",B5:85};
+ const prompt=kind==="SUM"?"Enter a formula that calculates the total score.":"Enter a formula that calculates the average score.";
+ app.innerHTML=shell(kind,kind==="SUM"?"SUM adds numbers together.":"AVERAGE finds the mean of a group of numbers.",`
+ <div class="card">${makeGrid(5,false,vals)}
+ <div class="chips"><span class="chip">=</span><span class="chip">${kind}</span><span class="chip">B2:B5</span></div>
+ <p>The formula should use the cells containing the four scores.</p><div class="task">${prompt}</div>
+ <div class="formula-box"><input id="formula" placeholder="e.g. =${kind}(B2:B5)"><button class="btn" id="check">Check Formula</button></div>
+ <button class="btn ghost" id="hint">Show Hint</button><div id="fb"></div></div>`);
+ document.getElementById("hint").onclick=()=>document.getElementById("fb").innerHTML=`<div class="feedback">💡 Hint: ${kind} works with the range <span class="ref">B2:B5</span>.</div>`;
+ document.getElementById("check").onclick=()=>{
+   const v=normalize(document.getElementById("formula").value), valid=formulaExpected(kind).some(x=>normalize(x)===v);
+   document.getElementById("fb").innerHTML=`<div class="feedback ${valid?"good":"bad"}">${valid?"✅ Correct! Your formula calculates the "+(kind==="SUM"?"total.":"average."):"❌ Not quite. Check the cells included in your range."}</div>`;
+   if(valid){award(kind==="SUM"?"p4":"p5",15);setTimeout(next,700)}
+ };
+}
+function renderMinMax(){
+ app.innerHTML=shell("MIN & MAX","Use MIN for the smallest value and MAX for the largest value.",`
+ <div class="card">${makeGrid(7,false,{A1:"Scores",B1:72,B2:91,B3:64,B4:88,B5:79,B6:95})}
+ <div class="task">Enter <strong>two formulas</strong>: one for the lowest score and one for the highest score.</div>
+ <div class="formula-box"><input id="min" placeholder="=MIN(B1:B6)"><input id="max" placeholder="=MAX(B1:B6)"><button class="btn" id="check">Check</button></div>
+ <button class="btn ghost" id="hint">Show Hint</button><div id="fb"></div></div>`);
+ document.getElementById("hint").onclick=()=>document.getElementById("fb").innerHTML=`<div class="feedback">💡 Hint: MIN = smallest. MAX = largest. Both can use the range <span class="ref">B1:B6</span>.</div>`;
+ document.getElementById("check").onclick=()=>{
+  const a=normalize(document.getElementById("min").value),b=normalize(document.getElementById("max").value);
+  const ok=a==="=MIN(B1:B6)"&&b==="=MAX(B1:B6)";
+  document.getElementById("fb").innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"✅ Great! You found both extremes.":"❌ Check your formula names and range."}</div>`;
+  if(ok){award("p6",10);setTimeout(next,700)}
+ };
+}
+function renderArithmetic(){
+ app.innerHTML=shell("Other Basic Calculations","Spreadsheets can also use ordinary arithmetic with cell references.",`
+ <div class="card"><div class="chips"><span class="chip">+ addition</span><span class="chip">− subtraction</span><span class="chip">* multiplication</span><span class="chip">/ division</span></div>
+ ${makeGrid(3,false,{A1:"Item",B1:"Price",C1:"Quantity",A2:"Pencil",B2:10,C2:3})}
+ <div class="task">Write a formula to calculate the total cost of the pencils.</div>
+ <div class="formula-box"><input id="formula" placeholder="=B2*C2"><button class="btn" id="check">Check Formula</button></div><div id="fb"></div></div>`);
+ document.getElementById("check").onclick=()=>{
+  const ok=normalize(document.getElementById("formula").value)==="=B2*C2";
+  document.getElementById("fb").innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"✅ Correct! 10 × 3 = 30.":"❌ Think about which cells contain price and quantity. Multiplication uses *."}</div>`;
+  if(ok){award("p7",10);setTimeout(next,700)}
+ };
+}
+function renderChallenge(){
+ const missions=[
+ ["Find the total","Use SUM.","=SUM(B2:B5)"],
+ ["Find the average","Use AVERAGE.","=AVERAGE(B2:B5)"],
+ ["Find the lowest value","Use MIN.","=MIN(B2:B5)"],
+ ["Find the highest value","Use MAX.","=MAX(B2:B5)"],
+ ["Calculate a value using multiplication","Multiply price by quantity.","=B2*C2"],
+ ["Change one piece of data","Change B3 to 100, then check.","CHANGE"]
+ ];
+ app.innerHTML=shell("Formula Challenge","Complete each mission. Incorrect attempts give hints rather than taking points away.",`
+ <div class="card"><div class="small">Mission <span id="mi">1</span> of ${missions.length}</div><h3 id="mt"></h3><p id="ms"></p>
+ <div id="challengeGrid"></div><div class="formula-box"><input id="answer" placeholder="Type your formula"><button class="btn" id="check">Check</button></div>
+ <div id="hint"></div></div>`);
+ let i=0; const vals={A1:"Item",B1:"Value",A2:"A",B2:10,A3:"B",B3:20,A4:"C",B4:30,A5:"D",B5:40};
+ function load(){const m=missions[i];document.getElementById("mi").textContent=i+1;document.getElementById("mt").textContent=m[0];document.getElementById("ms").textContent=m[1];document.getElementById("answer").value="";document.getElementById("hint").innerHTML="";document.getElementById("challengeGrid").innerHTML=makeGrid(5,true,vals);if(i===5)document.getElementById("answer").placeholder="Type CHANGE after editing B3";}
+ load();
+ document.getElementById("check").onclick=()=>{
+  const v=normalize(document.getElementById("answer").value);let ok=false;
+  if(i<5) ok=v===normalize(missions[i][2]);
+  else ok=v==="CHANGE"&&document.querySelector('[data-ref=B3]').innerText.trim()==="100";
+  if(!ok){document.getElementById("hint").innerHTML=`<div class="feedback bad">❌ Not quite. 💡 ${i===0?"SUM adds a group of numbers.":i===1?"AVERAGE finds the mean.":i===2?"MIN finds the smallest value.":i===3?"MAX finds the largest value.":i===4?"Use * to multiply.":"Change B3 to 100, then type CHANGE."}</div>`;return}
+  document.getElementById("hint").innerHTML=`<div class="feedback good">✅ Mission complete!</div>`;
+  i++;if(i===missions.length){award("p8",10);setTimeout(next,700)}else setTimeout(load,500);
+ };
+}
+function renderMission(){
+ const vals={A1:"Item",B1:"Price",C1:"Quantity",D1:"Total",A2:"Juice",B2:25,C2:4,A3:"Snacks",B3:40,C3:3,A4:"Fruit",B4:30,C4:5,A5:"Cups",B5:20,C5:2};
+ app.innerHTML=shell("Spreadsheet Mission","Class Party Planner: combine the skills you've learned to solve a realistic problem.",`
+ <div class="card"><div class="task">Your mission: calculate each item's total, then use SUM, AVERAGE, MIN and MAX to analyze the party costs.</div>
+ <div class="grid-wrap"><table class="sheet mission-table"><thead><tr><th></th><th>Item</th><th>Price</th><th>Quantity</th><th>Total</th></tr></thead><tbody>
+ ${[2,3,4,5].map(r=>`<tr><th>${r}</th><td>${vals["A"+r]}</td><td>${vals["B"+r]}</td><td contenteditable=true data-ref="C${r}">${vals["C"+r]}</td><td contenteditable=true data-ref="D${r}"></td></tr>`).join("")}</tbody></table></div>
+ <p class="small">Enter formulas in D2:D5, then enter formulas in the boxes below.</p>
+ <div class="formula-box"><input id="total" placeholder="Overall total: =SUM(D2:D5)"><input id="avg" placeholder="Average: =AVERAGE(D2:D5)"></div>
+ <div class="formula-box"><input id="min" placeholder="Cheapest: =MIN(D2:D5)"><input id="max" placeholder="Most expensive: =MAX(D2:D5)"></div>
+ <label class="field"><span>Budget: 300. Did the class stay within the budget?</span><input id="budget" placeholder="Yes or No"></label>
+ <button class="btn" id="check">Complete Mission</button><div id="fb"></div></div>`);
+ document.getElementById("check").onclick=()=>{
+  const get=r=>document.querySelector(`[data-ref=D${r}]`).innerText.trim();
+  const formulas=[2,3,4,5].every(r=>normalize(get(r))===normalize(`=B${r}*C${r}`));
+  const ok=formulas&&normalize(document.getElementById("total").value)==="=SUM(D2:D5)"&&normalize(document.getElementById("avg").value)==="=AVERAGE(D2:D5)"&&normalize(document.getElementById("min").value)==="=MIN(D2:D5)"&&normalize(document.getElementById("max").value)==="=MAX(D2:D5)"&&normalize(document.getElementById("budget").value)==="YES";
+  document.getElementById("fb").innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"🏆 Mission complete! Total cost is 400, so the class is not actually within a 300 budget—wait! Recheck your budget answer.":"❌ Not quite. Check every item total and each analysis formula."}</div>`;
+  // Correct mission data totals: 100 + 120 + 150 + 40 = 410, so budget answer should be NO.
+  const correct=formulas&&normalize(document.getElementById("total").value)==="=SUM(D2:D5)"&&normalize(document.getElementById("avg").value)==="=AVERAGE(D2:D5)"&&normalize(document.getElementById("min").value)==="=MIN(D2:D5)"&&normalize(document.getElementById("max").value)==="=MAX(D2:D5)"&&normalize(document.getElementById("budget").value)==="NO";
+  if(correct){document.getElementById("fb").innerHTML='<div class="feedback good">🏆 Mission complete! The total is 410, so the class is over the 300 budget.</div>';award("p9",10);setTimeout(next,700)}
+ };
+}
+function renderReflection(){
+ app.innerHTML=shell("Think About It","Show what you can take away from this lesson.",`
+ <div class="card"><h3>💭 What could you use Excel or spreadsheets for in the future?</h3>
+ <p class="small">Write about 2–4 sentences. You can think about school, home, a hobby, organizing information, keeping track of money, or planning something.</p>
+ <textarea id="reflection" rows="8" maxlength="1200" placeholder="I could use a spreadsheet to..."></textarea>
+ <button class="btn" id="finish">Finish Reflection</button><div id="fb"></div></div>`);
+ document.getElementById("reflection").value=state.reflection||"";
+ document.getElementById("finish").onclick=()=>{const v=document.getElementById("reflection").value.trim();if(v.length<25)return document.getElementById("fb").innerHTML='<div class="feedback bad">Please write a little more so your reflection has a meaningful response.</div>';state.reflection=v;award("reflection",10);go(11)};
+}
+function renderCertificate(){
+ const [g,label]=grade(state.score);
+ app.innerHTML=`<div class="center"><div class="eyebrow">Lesson complete</div><h2>🎉 Great work, ${esc(state.name)}!</h2>
+ <div class="card"><div class="results-score">${state.score} / 100</div><div class="grade">${g} — ${label}</div>
+ <table class="breakdown"><tbody>${[
+ ["Spreadsheet Basics","p1",10],["Cells & References","p2",10],["Entering Data","p3",10],["SUM","p4",15],["AVERAGE","p5",15],["MIN & MAX","p6",10],["Calculations","p7",10],["Formula Challenge","p8",10],["Final Mission","p9",10],["Reflection","reflection",10]
+ ].map(x=>`<tr><td>${x[0]}</td><td>${state.earned[x[1]]||0}/${x[2]}</td></tr>`).join("")}</tbody></table></div>
+ <div class="certificate" id="certificate"><div class="eyebrow">Certificate of Achievement</div><h2>CERTIFICATE OF ACHIEVEMENT</h2><p>This certificate is proudly presented to</p><div class="student">${esc(state.name)}</div><p>for successfully completing</p><h3>P5/P6 Spreadsheet Skills</h3>
+ <p>The student demonstrated skills in:</p><div class="cert-list"><span>✓ Cells & References</span><span>✓ Data Entry</span><span>✓ SUM</span><span>✓ AVERAGE</span><span>✓ MIN & MAX</span><span>✓ Calculations</span><span>✓ Problem Solving</span></div>
+ <h3>Score: ${state.score} / 100 &nbsp; • &nbsp; Grade: ${g}</h3><p>Date: ${new Date().toLocaleDateString()}</p><p style="margin-top:45px">Teacher: ______________________________</p></div>
+ <div class="actions center no-print"><button class="btn" onclick="window.print()">🖨 Print Certificate</button><button class="btn secondary" id="download">⬇ Save Certificate</button><button class="btn ghost" id="restart">Start Again</button></div></div>`;
+ document.getElementById("download").onclick=downloadCertificate;
+ document.getElementById("restart").onclick=()=>{localStorage.removeItem(KEY);location.reload()};
+}
+function downloadCertificate(){
+ const cert=document.getElementById("certificate").outerHTML;
+ const html=`<!doctype html><html><head><meta charset="utf-8"><title>Certificate - ${esc(state.name)}</title><style>body{font-family:Arial,sans-serif;padding:40px;color:#172033}.certificate{text-align:center;border:8px double #27334d;padding:55px}.student{font-size:36px;font-weight:900;margin:25px}.cert-list span{display:inline-block;background:#eee;padding:7px;margin:4px}</style></head><body>${cert}</body></html>`;
+ const blob=new Blob([html],{type:"text/html"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`Mission-Excel-${state.name}.html`;a.click();URL.revokeObjectURL(url);
+}
+function teacherView(){
+ app.innerHTML=`<div class="card narrow teacher-panel"><div class="eyebrow">Teacher View</div><h2>Local Results</h2>
+ <p>Because this is a static site, results stay in this browser unless a student exports them.</p>
+ <table class="breakdown"><tr><th>Student</th><td>${esc(state.name||"Not started")}</td></tr><tr><th>Score</th><td>${state.score}/100</td></tr><tr><th>Grade</th><td>${state.name?grade(state.score).join(" — "):"—"}</td></tr><tr><th>Status</th><td>${state.phase>=11?"Complete":"In progress"}</td></tr></table>
+ <h3>Reflection</h3><p>${esc(state.reflection||"No reflection yet.")}</p>
+ <div class="actions"><button class="btn ghost" onclick="render()">Back</button><button class="btn" id="copy">Copy Results Summary</button></div></div>`;
+ document.getElementById("copy").onclick=async()=>{const txt=`Mission Excel Results\nStudent: ${state.name}\nScore: ${state.score}/100\nGrade: ${state.name?grade(state.score).join(" — "):"—"}\nStatus: ${state.phase>=11?"Complete":"In progress"}\nReflection: ${state.reflection}`;await navigator.clipboard.writeText(txt);toast("Results copied!")};
+}
+render();

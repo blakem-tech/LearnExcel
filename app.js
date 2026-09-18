@@ -150,7 +150,7 @@ function renderMinMax(){
 function renderArithmetic(){
  app.innerHTML=shell("Other Basic Calculations","Spreadsheets can also use ordinary arithmetic with cell references.",`
  <div class="card"><div class="chips"><span class="chip">+ addition</span><span class="chip">− subtraction</span><span class="chip">* multiplication</span><span class="chip">/ division</span></div>
- ${makeGrid(3,false,{A1:"(A) Item",B1:"(B) Price",C1:"(C) Quantity",A2:"Pencil",B2:10,C2:3})}
+ ${makeGrid(3,false,{A1:"Item",B1:"Price",C1:"Quantity",A2:"Pencil",B2:10,C2:3})}
  <div class="task">Write a formula to calculate the total cost of the pencils.</div>
  <div class="formula-box"><input id="formula" placeholder="=B2*C2"><button class="btn" id="check">Check Formula</button></div><div id="fb"></div></div>`);
  document.getElementById("check").onclick=()=>{
@@ -161,7 +161,7 @@ function renderArithmetic(){
 }
 function renderChallenge(){
  const missions=[
-  {title:"Find the total",instruction:"Calculate the total amount of all of the items, not the total amount spent. Use SUM.",answer:"=SUM(D2:D6)",hint:"The item totals are in column D. SUM adds a group of numbers."},
+  {title:"Find the total",instruction:"Calculate the total amount spent. Use SUM.",answer:"=SUM(D2:D6)",hint:"The item totals are in column D. SUM adds a group of numbers."},
   {title:"Find the average",instruction:"Calculate the average cost of one item. Use AVERAGE.",answer:"=AVERAGE(D2:D6)",hint:"Use the range containing the five item totals: D2:D6."},
   {title:"Find the cheapest item",instruction:"Find the lowest item total. Use MIN.",answer:"=MIN(D2:D6)",hint:"MIN finds the smallest number. Look at the totals in column D."},
   {title:"Find the most expensive item",instruction:"Find the highest item total. Use MAX.",answer:"=MAX(D2:D6)",hint:"MAX finds the largest number. Look at the totals in column D."},

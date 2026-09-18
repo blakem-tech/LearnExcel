@@ -161,7 +161,7 @@ function renderArithmetic(){
 }
 function renderChallenge(){
  const missions=[
-  {title:"Find the total",instruction:"Calculate the total amount spent on all of the items. Use SUM.",answer:"=SUM(D2:D6)",hint:"The item totals are in column D. SUM adds a group of numbers."},
+  {title:"Find the total",instruction:"Calculate the total amount of all of the items, not the total amount spent. Use SUM.",answer:"=SUM(D2:D6)",hint:"The item totals are in column D. SUM adds a group of numbers."},
   {title:"Find the average",instruction:"Calculate the average cost of one item. Use AVERAGE.",answer:"=AVERAGE(D2:D6)",hint:"Use the range containing the five item totals: D2:D6."},
   {title:"Find the cheapest item",instruction:"Find the lowest item total. Use MIN.",answer:"=MIN(D2:D6)",hint:"MIN finds the smallest number. Look at the totals in column D."},
   {title:"Find the most expensive item",instruction:"Find the highest item total. Use MAX.",answer:"=MAX(D2:D6)",hint:"MAX finds the largest number. Look at the totals in column D."},
@@ -189,26 +189,91 @@ function renderChallenge(){
  document.getElementById("check").onclick=()=>{const m=missions[i],v=normalize(document.getElementById("answer").value);let ok=false;if(i<5)ok=v===normalize(m.answer)||(m.equivalents||[]).some(x=>v===normalize(x));else{const applePrice=document.querySelector('[data-ref="C2"]').innerText.trim();ok=v==="CHANGE"&&applePrice==="35";}if(!ok){document.getElementById("fb").innerHTML='<div class="feedback bad">❌ Not quite. Try the hint and check the receipt carefully.</div>';return;}document.getElementById("fb").innerHTML='<div class="feedback good">✅ Mission complete!</div>';i++;if(i===missions.length){award("p8",10);setTimeout(next,700);}else setTimeout(load,500);};
 }
 function renderMission(){
- const vals={A1:"Item",B1:"Price",C1:"Quantity",D1:"Total",A2:"Juice",B2:25,C2:4,A3:"Snacks",B3:40,C3:3,A4:"Fruit",B4:30,C4:5,A5:"Cups",B5:20,C5:2};
+ const vals={A1:"(A) Item",B1:"(B) Price",C1:"(C) Quantity",D1:"(D) Total",A2:"Juice",B2:25,C2:4,A3:"Snacks",B3:40,C3:3,A4:"Fruit",B4:30,C4:5,A5:"Cups",B5:20,C5:2};
+ const rowTotal=r=>Number(vals["B"+r])*Number(vals["C"+r]);
+ const totals=[2,3,4,5].map(rowTotal);
+ const overall=totals.reduce((a,b)=>a+b,0), average=overall/totals.length, cheapest=Math.min(...totals), mostExpensive=Math.max(...totals);
  app.innerHTML=shell("Spreadsheet Mission","Class Party Planner: combine the skills you've learned to solve a realistic problem.",`
  <div class="card"><div class="task">Your mission: calculate each item's total, then use SUM, AVERAGE, MIN and MAX to analyze the party costs.</div>
+ <div class="mission-instructions"><strong>How to complete this mission:</strong> In the <b>Total</b> cells, type the formula shown under the table. When your formula is correct, the cell will change to the calculated result. For the four analysis boxes, type the formula and use its <b>Check</b> button to see your result.</div>
  <div class="grid-wrap"><table class="sheet mission-table"><thead><tr><th></th><th>Item</th><th>Price</th><th>Quantity</th><th>Total</th></tr></thead><tbody>
- ${[2,3,4,5].map(r=>`<tr><th>${r}</th><td>${vals["A"+r]}</td><td>${vals["B"+r]}</td><td contenteditable=true data-ref="C${r}">${vals["C"+r]}</td><td contenteditable=true data-ref="D${r}"></td></tr>`).join("")}</tbody></table></div>
- <p class="small">Enter formulas in D2:D5, then enter formulas in the boxes below.</p>
- <div class="formula-box"><input id="total" placeholder="Overall total: =SUM(D2:D5)"><input id="avg" placeholder="Average: =AVERAGE(D2:D5)"></div>
- <div class="formula-box"><input id="min" placeholder="Cheapest: =MIN(D2:D5)"><input id="max" placeholder="Most expensive: =MAX(D2:D5)"></div>
- <label class="field"><span>Budget: 300. Did the class stay within the budget?</span><input id="budget" placeholder="Yes or No"></label>
+ ${[2,3,4,5].map(r=>`<tr><th>${r}</th><td>${vals["A"+r]}</td><td>${vals["B"+r]}</td><td contenteditable="true" data-ref="C${r}">${vals["C"+r]}</td><td contenteditable="true" data-ref="D${r}" data-expected="=B${r}*C${r}"></td></tr>`).join("")}</tbody></table></div>
+ <div class="mission-formula-guide"><div><b>D2</b> → <code>=B2*C2</code></div><div><b>D3</b> → <code>=B3*C3</code></div><div><b>D4</b> → <code>=B4*C4</code></div><div><b>D5</b> → <code>=B5*C5</code></div></div>
+ <div class="formula-check-grid">
+   <div class="formula-check"><label for="total"><b>Overall Total</b><span>Add all item totals.</span></label><div class="formula-row"><input id="total" placeholder="Type: =SUM(D2:D5)"><button class="btn small-btn" id="checkSum">Check SUM</button></div><div class="result-badge" id="totalResult"></div></div>
+   <div class="formula-check"><label for="avg"><b>Average</b><span>Find the average item cost.</span></label><div class="formula-row"><input id="avg" placeholder="Type: =AVERAGE(D2:D5)"><button class="btn small-btn" id="checkAvg">Check Average</button></div><div class="result-badge" id="avgResult"></div></div>
+   <div class="formula-check"><label for="min"><b>Cheapest</b><span>Find the smallest total.</span></label><div class="formula-row"><input id="min" placeholder="Type: =MIN(D2:D5)"><button class="btn small-btn" id="checkMin">Check MIN</button></div><div class="result-badge" id="minResult"></div></div>
+   <div class="formula-check"><label for="max"><b>Most Expensive</b><span>Find the largest total.</span></label><div class="formula-row"><input id="max" placeholder="Type: =MAX(D2:D5)"><button class="btn small-btn" id="checkMax">Check MAX</button></div><div class="result-badge" id="maxResult"></div></div>
+ </div>
+ <label class="field"><span><b>Budget: 300</b> — Did the class stay within the budget?</span><input id="budget" placeholder="Type Yes or No"></label>
  <button class="btn" id="check">Complete Mission</button><div id="fb"></div></div>`);
+
+ const clean=s=>normalize(String(s||""));
+ const evaluateFormula=(formula)=>{
+   const f=clean(formula);
+   const values={D2:rowTotal(2),D3:rowTotal(3),D4:rowTotal(4),D5:rowTotal(5)};
+   if(f==="=SUM(D2:D5)") return overall;
+   if(f==="=AVERAGE(D2:D5)") return average;
+   if(f==="=MIN(D2:D5)") return cheapest;
+   if(f==="=MAX(D2:D5)") return mostExpensive;
+   const m=f.match(/^=(B[2-5])\*(C[2-5])$/);
+   if(m && m[1][1]===m[2][1]) return values["D"+m[1][1]];
+   const m2=f.match(/^=(C[2-5])\*(B[2-5])$/);
+   if(m2 && m2[1][1]===m2[2][1]) return values["D"+m2[1][1]];
+   return null;
+ };
+ const setFeedback=(id,good,message)=>{document.getElementById(id).innerHTML=`<div class="feedback ${good?"good":"bad"}">${good?"✓ ":"✗ "}${message}</div>`};
+
+ [2,3,4,5].forEach(r=>{
+   const cell=document.querySelector(`[data-ref=D${r}]`);
+   cell.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();cell.blur()}});
+   cell.addEventListener("blur",()=>{
+     const formula=cell.innerText.trim();
+     const result=evaluateFormula(formula);
+     if(result!==null){cell.dataset.formula=formula;cell.dataset.result=result;cell.innerText=String(result);cell.classList.add("calculated")}
+     else if(formula){cell.classList.remove("calculated");delete cell.dataset.formula;delete cell.dataset.result}
+   });
+   cell.addEventListener("click",()=>{if(cell.dataset.formula && cell.classList.contains("calculated")){cell.innerText=cell.dataset.formula;cell.classList.remove("calculated");cell.focus()}});
+ });
+
+ const analysisChecks=[
+   ["checkSum","total","totalResult","=SUM(D2:D5)",overall,"SUM"],
+   ["checkAvg","avg","avgResult","=AVERAGE(D2:D5)",average,"AVERAGE"],
+   ["checkMin","min","minResult","=MIN(D2:D5)",cheapest,"MIN"],
+   ["checkMax","max","maxResult","=MAX(D2:D5)",mostExpensive,"MAX"]
+ ];
+ analysisChecks.forEach(([buttonId,inputId,resultId,expected,result,display])=>{
+   document.getElementById(buttonId).onclick=()=>{
+     const input=document.getElementById(inputId);
+     const value=clean(input.value);
+     if(value===clean(expected)){
+       document.getElementById(resultId).innerHTML=`<span class="calculated-result">Result: <strong>${result}</strong></span>`;
+       input.classList.add("correct");
+       setFeedback("fb",true,`${display} formula is correct.`);
+     }else{
+       document.getElementById(resultId).innerHTML=`<span class="hint-result">Check the formula shown in the placeholder.</span>`;
+       input.classList.remove("correct");
+       setFeedback("fb",false,`Your ${display} formula needs another look. Use the Check button again when you have fixed it.`);
+     }
+   };
+ });
+
  document.getElementById("check").onclick=()=>{
-  const get=r=>document.querySelector(`[data-ref=D${r}]`).innerText.trim();
-  const formulas=[2,3,4,5].every(r=>normalize(get(r))===normalize(`=B${r}*C${r}`));
-  const ok=formulas&&normalize(document.getElementById("total").value)==="=SUM(D2:D5)"&&normalize(document.getElementById("avg").value)==="=AVERAGE(D2:D5)"&&normalize(document.getElementById("min").value)==="=MIN(D2:D5)"&&normalize(document.getElementById("max").value)==="=MAX(D2:D5)"&&normalize(document.getElementById("budget").value)==="YES";
-  document.getElementById("fb").innerHTML=`<div class="feedback ${ok?"good":"bad"}">${ok?"🏆 Mission complete! Total cost is 400, so the class is not actually within a 300 budget—wait! Recheck your budget answer.":"❌ Not quite. Check every item total and each analysis formula."}</div>`;
-  // Correct mission data totals: 100 + 120 + 150 + 40 = 410, so budget answer should be NO.
-  const correct=formulas&&normalize(document.getElementById("total").value)==="=SUM(D2:D5)"&&normalize(document.getElementById("avg").value)==="=AVERAGE(D2:D5)"&&normalize(document.getElementById("min").value)==="=MIN(D2:D5)"&&normalize(document.getElementById("max").value)==="=MAX(D2:D5)"&&normalize(document.getElementById("budget").value)==="NO";
-  if(correct){document.getElementById("fb").innerHTML='<div class="feedback good">🏆 Mission complete! The total is 410, so the class is over the 300 budget.</div>';award("p9",10);setTimeout(next,700)}
+   const formulas=[2,3,4,5].every(r=>document.querySelector(`[data-ref=D${r}]`).dataset.formula && clean(document.querySelector(`[data-ref=D${r}]`).dataset.formula)===clean(`=B${r}*C${r}`));
+   const analyses=analysisChecks.every(([,inputId,,expected])=>clean(document.getElementById(inputId).value)===clean(expected));
+   const budget=clean(document.getElementById("budget").value)==="NO";
+   const correct=formulas&&analyses&&budget;
+   if(correct){document.getElementById("fb").innerHTML='<div class="feedback good">🏆 Mission complete! The total is 410, so the class is over the 300 budget.</div>';award("p9",10);setTimeout(next,700)}
+   else{
+     const missing=[];
+     if(!formulas)missing.push("the item totals");
+     if(!analyses)missing.push("one or more analysis formulas");
+     if(!budget)missing.push("the budget answer");
+     document.getElementById("fb").innerHTML=`<div class="feedback bad">❌ Not quite. Check ${missing.join(", ")}. Use the individual Check buttons to find exactly which part needs fixing.</div>`;
+   }
  };
 }
+
 function renderReflection(){
  app.innerHTML=shell("Think About It","Show what you can take away from this lesson.",`
  <div class="card"><h3>💭 What could you use Excel or spreadsheets for in the future?</h3>
@@ -225,7 +290,7 @@ function renderCertificate(){
  <table class="breakdown"><tbody>${[
  ["Spreadsheet Basics","p1",10],["Cells & References","p2",10],["Entering Data","p3",10],["SUM","p4",15],["AVERAGE","p5",15],["MIN & MAX","p6",10],["Calculations","p7",10],["Formula Challenge","p8",10],["Final Mission","p9",10],["Reflection","reflection",10]
  ].map(x=>`<tr><td>${x[0]}</td><td>${state.earned[x[1]]||0}/${x[2]}</td></tr>`).join("")}</tbody></table></div>
- <div class="certificate" id="certificate"><div class="eyebrow">Certificate of Achievement</div><h2>CERTIFICATE OF ACHIEVEMENT</h2><p>This certificate is proudly presented to</p><div class="student">${esc(state.name)}</div><p>for successfully completing</p><h3>P5/P6 Spreadsheet Skills</h3>
+ <div class="certificate" id="certificate"><div class="eyebrow">Certificate of Achievement</div><h2>Excel Guru</h2><p>This certificate is proudly presented to</p><div class="student">${esc(state.name)}</div><p>for successfully completing</p><h3>the level 1 excel Spreadsheet Skill challenge</h3>
  <p>The student demonstrated skills in:</p><div class="cert-list"><span>✓ Cells & References</span><span>✓ Data Entry</span><span>✓ SUM</span><span>✓ AVERAGE</span><span>✓ MIN & MAX</span><span>✓ Calculations</span><span>✓ Problem Solving</span></div>
  <h3>Score: ${state.score} / 100 &nbsp; • &nbsp; Grade: ${g}</h3><p>Date: ${new Date().toLocaleDateString()}</p><p style="margin-top:45px">Teacher: ______________________________</p></div>
  <div class="actions center no-print"><button class="btn" onclick="window.print()">🖨 Print Certificate</button><button class="btn secondary" id="download">⬇ Save Certificate</button><button class="btn ghost" id="restart">Start Again</button></div></div>`;
